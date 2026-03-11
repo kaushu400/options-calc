@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KK Options Annualized Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .input-yellow {
+            background-color: #fef9c3; /* Tailwind yellow-100 */
+            border: 1px solid #fde047;
+        }
+        .input-yellow:focus {
+            background-color: #fef08a;
+            outline: 2px solid #eab308;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            padding: 1.5rem;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen p-4 md:p-8 font-sans">
+
+    <div class="max-w-4xl mx-auto">
+        <header class="mb-8 border-b pb-4">
+            <h1 class="text-3xl font-bold text-slate-800">KK Options Annualized Calculator</h1>
+            <p class="text-slate-500">Yield analysis with dynamic Expiration calculation</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            
+            <div class="card">
+                <h2 class="text-lg font-bold text-slate-700 mb-4 flex items-center">
+                    <span class="mr-2">📝</span> Inputs (Yellow Fields)
+                </h2>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Stock Ticker</label>
+                        <input type="text" id="stock" value="AMD" class="w-full p-2 rounded input-yellow uppercase">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-600 mb-1">Strike Price ($)</label>
+                            <input type="number" id="strike" value="112" step="any" class="w-full p-2 rounded input-yellow">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-600 mb-1">Premium ($)</label>
+                            <input type="number" id="premium" value="1.10" step="any" class="w-full p-2 rounded input-yellow">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-600 mb-1">Expiration Date</label>
+                            <input type="date" id="expiry" class="w-full p-2 rounded input-yellow">
+                            <p class="text-[11px] text-blue-600 font-bold mt-1">Calculated DTE: <span id="display-dte">--</span> days</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-600 mb-1">Tax Rate (%)</label>
+                            <input type="number" id="taxRate" value="24" class="w-full p-2 border border-slate-200 rounded focus:ring-2 focus:ring-blue-400 outline-none">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <div class="bg-blue-600 rounded-xl p-6 text-white shadow-lg">
+                    <p class="text-blue-100 text-xs font-bold uppercase tracking-widest">Stock Cost If Assigned</p>
+                    <div class="text-4xl font-bold mt-1" id="res-stock-cost">$0.00</div>
+                    <p class="text-blue-200 text-[10px] mt-2 italic opacity-80">Formula: (Strike * 100) - (Premium * 100)</p>
+                </div>
+
+                <div class="card space-y-6">
+                    <div class="flex justify-between items-center border-b pb-4">
+                        <div>
+                            <p class="text-slate-500 text-sm">Return on Capital</p>
+                            <p class="text-2xl font-bold text-slate-800" id="res-raw-return">0.00%</p>
+                        </div>
+                        <div class="text-2xl">💰</div>
+                    </div>
+
+                    <div class="flex justify-between items-center border-b pb-4">
+                        <div>
+                            <p class="text-slate-500 text-sm">Annualized Return</p>
+                            <p class="text-2xl font-bold text-slate-800" id="res-ann-return">0.00%</p>
+                        </div>
+                        <div class="text-2xl">📈</div>
+                    </div>
+
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="text-slate-500 text-sm font-bold">Ann. Return (Post-Tax)</p>
+                            <p class="text-3xl font-bold text-emerald-600" id="res-tax-return">0.00%</p>
+                        </div>
+                        <div class="text-2xl">🏦</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Set a default date (today + 30 days) for the UI on load
+        window.onload = function() {
+            const date = new Date();
+            date.setDate(date.getDate() + 30);
+            document.getElementById('expiry').valueAsDate = date;
+            calculate();
+        };
+
+        const outputs = {
+            stockCost: document.getElementById('res-stock-cost'),
+            rawReturn: document.getElementById('res-raw-return'),
+            annReturn: document.getElementById('res-ann-return'),
+            taxReturn: document.getElementById('res-tax-return'),
+            dteDisplay: document.getElementById('display-dte')
+        };
+
+        function calculate() {
+            const strike = parseFloat(document.getElementById('strike').value) || 0;
+            const premium = parseFloat(document.getElementById('premium').value) || 0;
+            const taxRate = parseFloat(document.getElementById('taxRate').value) || 0;
+            const expiryValue = document.getElementById('expiry').value;
+
+            // 1. Calculate DTE from Date
+            let dte = 1;
+            if (expiryValue) {
+                const expiryDate = new Date(expiryValue);
+                const today = new Date();
+                
+                // Reset time to midnight for accurate day difference
+                today.setHours(0, 0, 0, 0);
+                expiryDate.setHours(0, 0, 0, 0);
+                
+                const diffTime = expiryDate - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                // If the user selects today or a past date, default to 1 DTE to avoid division by zero
+                dte = diffDays > 0 ? diffDays : 1;
+            }
+            outputs.dteDisplay.innerText = dte;
+
+            // 2. Spreadsheet Logic
+            const stockCost = (strike * 100) - (premium * 100);
+            const rawReturn = (strike - premium) !== 0 ? (premium / (strike - premium)) * 100 : 0;
+            const annReturn = rawReturn * (365 / dte);
+            const taxReturn = annReturn * (1 - (taxRate / 100));
+
+            // 3. Update UI
+            outputs.stockCost.innerText = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(stockCost);
+            outputs.rawReturn.innerText = rawReturn.toFixed(4) + '%';
+            outputs.annReturn.innerText = annReturn.toFixed(4) + '%';
+            outputs.taxReturn.innerText = taxReturn.toFixed(4) + '%';
+        }
+
+        // Add listeners
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('input', calculate);
+        });
+    </script>
+</body>
+</html>
