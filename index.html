@@ -15,6 +15,12 @@
             outline: 2px solid #eab308;
         }
         body { min-height: -webkit-fill-available; }
+        /* Remove arrows from number inputs for a cleaner look on mobile */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
     </style>
 </head>
 <body class="bg-slate-100 font-sans text-slate-900">
@@ -45,8 +51,9 @@
 
         <div class="p-4 space-y-4">
             <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                <h2 class="text-sm font-bold text-slate-700 mb-4 uppercase tracking-tight">
-                    📊 Options Parameters
+                <h2 class="text-sm font-bold text-slate-700 mb-4 uppercase tracking-tight flex justify-between items-center">
+                    <span>📊 Options Parameters</span>
+                    <button onclick="window.location.reload()" class="text-[10px] text-blue-500 font-normal">Clear All</button>
                 </h2>
                 
                 <div class="space-y-4">
@@ -58,11 +65,11 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase">Strike ($)</label>
-                            <input type="number" id="strike" placeholder="0.00" step="any" class="w-full p-3 rounded-lg input-yellow font-bold text-lg">
+                            <input type="number" id="strike" placeholder="0.00" step="any" inputmode="decimal" class="w-full p-3 rounded-lg input-yellow font-bold text-lg">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase">Premium ($)</label>
-                            <input type="number" id="premium" placeholder="0.00" step="any" class="w-full p-3 rounded-lg input-yellow font-bold text-lg">
+                            <input type="number" id="premium" placeholder="0.00" step="any" inputmode="decimal" class="w-full p-3 rounded-lg input-yellow font-bold text-lg">
                         </div>
                     </div>
 
@@ -74,7 +81,7 @@
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase">Tax Rate %</label>
-                            <input type="number" id="taxRate" placeholder="24" class="w-full p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none font-bold text-lg">
+                            <input type="number" id="taxRate" placeholder="24" inputmode="numeric" class="w-full p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none font-bold text-lg">
                         </div>
                     </div>
                 </div>
@@ -97,7 +104,6 @@
             const taxRate = parseFloat(document.getElementById('taxRate').value) || 0;
             const expiryValue = document.getElementById('expiry').value;
 
-            // Don't calculate if basic inputs are missing
             if (isNaN(strike) || isNaN(premium)) {
                 resetUI();
                 return;
@@ -105,17 +111,23 @@
 
             let dte = 0;
             if (expiryValue) {
-                const expiryDate = new Date(expiryValue);
+                // Split the date to force Local Time instead of UTC (fixes the 1-day-off bug)
+                const [year, month, day] = expiryValue.split('-').map(Number);
+                const expiryDate = new Date(year, month - 1, day);
+                
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 expiryDate.setHours(0, 0, 0, 0);
+                
                 const diffTime = expiryDate - today;
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                dte = diffDays > 0 ? diffDays : 0;
+                const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+                
+                // ADDING +1 to match spreadsheet inclusive logic
+                // If today is Mon and Expiry is Fri, diff is 4, DTE is 5.
+                dte = diffDays >= 0 ? diffDays + 1 : 0;
             }
             outputs.dteDisplay.innerText = dte;
 
-            // Logic from Spreadsheet
             const stockCost = (strike * 100) - (premium * 100);
             const capitalRequired = strike - premium;
             
@@ -125,16 +137,15 @@
 
             if (capitalRequired > 0) {
                 rawReturn = (premium / capitalRequired) * 100;
-                // Avoid division by zero for DTE
+                // Use the corrected DTE for the 365 multiplier
                 annReturn = dte > 0 ? rawReturn * (365 / dte) : 0;
                 taxReturn = annReturn * (1 - (taxRate / 100));
             }
 
-            // Update UI
             outputs.stockCost.innerText = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(stockCost);
             outputs.rawReturn.innerText = rawReturn.toFixed(2) + '%';
-            outputs.annReturn.innerText = (annReturn > 10000 ? "High" : annReturn.toFixed(2) + '%');
-            outputs.taxReturn.innerText = (taxReturn > 10000 ? "High" : taxReturn.toFixed(2) + '%');
+            outputs.annReturn.innerText = annReturn.toFixed(2) + '%';
+            outputs.taxReturn.innerText = taxReturn.toFixed(2) + '%';
         }
 
         function resetUI() {
