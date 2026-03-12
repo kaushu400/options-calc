@@ -15,7 +15,6 @@
             outline: 2px solid #eab308;
         }
         body { min-height: -webkit-fill-available; }
-        /* Remove arrows from number inputs for a cleaner look on mobile */
         input::-webkit-outer-spin-button,
         input::-webkit-inner-spin-button {
             -webkit-appearance: none;
@@ -81,7 +80,7 @@
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase">Tax Rate %</label>
-                            <input type="number" id="taxRate" placeholder="24" inputmode="numeric" class="w-full p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none font-bold text-lg">
+                            <input type="number" id="taxRate" value="24" inputmode="numeric" class="w-full p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none font-bold text-lg">
                         </div>
                     </div>
                 </div>
@@ -111,7 +110,7 @@
 
             let dte = 0;
             if (expiryValue) {
-                // Split the date to force Local Time instead of UTC (fixes the 1-day-off bug)
+                // Parse date components to avoid timezone offsets
                 const [year, month, day] = expiryValue.split('-').map(Number);
                 const expiryDate = new Date(year, month - 1, day);
                 
@@ -120,11 +119,11 @@
                 expiryDate.setHours(0, 0, 0, 0);
                 
                 const diffTime = expiryDate - today;
+                // Use Math.round to get the exact integer difference in days
                 const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
                 
-                // ADDING +1 to match spreadsheet inclusive logic
-                // If today is Mon and Expiry is Fri, diff is 4, DTE is 5.
-                dte = diffDays >= 0 ? diffDays + 1 : 0;
+                // If today is 3/12 and Expiry is 3/20, dte is now exactly 8.
+                dte = diffDays > 0 ? diffDays : 0;
             }
             outputs.dteDisplay.innerText = dte;
 
@@ -137,8 +136,12 @@
 
             if (capitalRequired > 0) {
                 rawReturn = (premium / capitalRequired) * 100;
-                // Use the corrected DTE for the 365 multiplier
-                annReturn = dte > 0 ? rawReturn * (365 / dte) : 0;
+                
+                // Standard Annualization: If DTE is 0 (expires today), 
+                // we treat it as 1 to avoid infinity, or 0 to show 0.
+                // Trading convention usually uses 1 for same-day to calculate yield.
+                const effectiveDte = dte > 0 ? dte : 1; 
+                annReturn = rawReturn * (365 / effectiveDte);
                 taxReturn = annReturn * (1 - (taxRate / 100));
             }
 
