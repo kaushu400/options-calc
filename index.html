@@ -14,7 +14,6 @@
             background-color: #fef08a;
             outline: 2px solid #eab308;
         }
-        /* Prevents the keyboard from pushing layout weirdly on some mobile browsers */
         body { min-height: -webkit-fill-available; }
     </style>
 </head>
@@ -23,22 +22,22 @@
     <div class="max-w-md mx-auto">
         
         <div class="sticky top-0 z-10 bg-slate-100 pt-4 px-4 pb-2 shadow-sm border-b border-slate-200">
-            <div class="bg-blue-600 rounded-xl p-4 text-white shadow-md mb-3">
+            <div class="bg-blue-600 rounded-xl p-4 text-white shadow-md mb-3 text-center">
                 <p class="text-blue-100 text-[10px] font-bold uppercase tracking-wider">Stock Cost If Assigned</p>
                 <div class="text-3xl font-bold" id="res-stock-cost">$0.00</div>
             </div>
 
             <div class="grid grid-cols-3 gap-2">
                 <div class="bg-white p-2 rounded-lg border border-slate-200 text-center shadow-sm">
-                    <p class="text-slate-500 text-[9px] font-bold uppercase">Return</p>
+                    <p class="text-slate-500 text-[9px] font-bold uppercase tracking-tighter">Return</p>
                     <p class="text-sm font-bold text-slate-800" id="res-raw-return">0.00%</p>
                 </div>
                 <div class="bg-white p-2 rounded-lg border border-slate-200 text-center shadow-sm">
-                    <p class="text-slate-500 text-[9px] font-bold uppercase">Ann.</p>
+                    <p class="text-slate-500 text-[9px] font-bold uppercase tracking-tighter">Ann.</p>
                     <p class="text-sm font-bold text-slate-800" id="res-ann-return">0.00%</p>
                 </div>
                 <div class="bg-emerald-50 p-2 rounded-lg border border-emerald-200 text-center shadow-sm">
-                    <p class="text-emerald-700 text-[9px] font-bold uppercase">Net (Tax)</p>
+                    <p class="text-emerald-700 text-[9px] font-bold uppercase tracking-tighter">Net (Tax)</p>
                     <p class="text-sm font-bold text-emerald-600" id="res-tax-return">0.00%</p>
                 </div>
             </div>
@@ -46,24 +45,24 @@
 
         <div class="p-4 space-y-4">
             <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                <h2 class="text-sm font-bold text-slate-700 mb-4 flex items-center uppercase tracking-tight">
-                    <span class="mr-2">⚙️</span> Adjust Parameters
+                <h2 class="text-sm font-bold text-slate-700 mb-4 uppercase tracking-tight">
+                    📊 Options Parameters
                 </h2>
                 
                 <div class="space-y-4">
                     <div>
                         <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase">Stock Ticker</label>
-                        <input type="text" id="stock" value="AMD" class="w-full p-3 rounded-lg input-yellow uppercase font-bold text-lg">
+                        <input type="text" id="stock" placeholder="e.g. NVDA" class="w-full p-3 rounded-lg input-yellow uppercase font-bold text-lg">
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase">Strike ($)</label>
-                            <input type="number" id="strike" value="112" step="any" class="w-full p-3 rounded-lg input-yellow font-bold text-lg">
+                            <input type="number" id="strike" placeholder="0.00" step="any" class="w-full p-3 rounded-lg input-yellow font-bold text-lg">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase">Premium ($)</label>
-                            <input type="number" id="premium" value="1.10" step="any" class="w-full p-3 rounded-lg input-yellow font-bold text-lg">
+                            <input type="number" id="premium" placeholder="0.00" step="any" class="w-full p-3 rounded-lg input-yellow font-bold text-lg">
                         </div>
                     </div>
 
@@ -71,29 +70,19 @@
                         <div>
                             <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase">Expiration</label>
                             <input type="date" id="expiry" class="w-full p-3 rounded-lg input-yellow text-sm font-bold">
-                            <p class="text-[10px] text-blue-600 font-bold mt-1">DTE: <span id="display-dte">--</span> days</p>
+                            <p class="text-[10px] text-blue-600 font-bold mt-1">DTE: <span id="display-dte">0</span> days</p>
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase">Tax Rate %</label>
-                            <input type="number" id="taxRate" value="24" class="w-full p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none font-bold text-lg">
+                            <input type="number" id="taxRate" placeholder="24" class="w-full p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none font-bold text-lg">
                         </div>
                     </div>
                 </div>
             </div>
-            
-            <p class="text-center text-[10px] text-slate-400 pb-10">Calculations update automatically as you type.</p>
         </div>
     </div>
 
     <script>
-        // Set default date (today + 30 days)
-        window.onload = function() {
-            const date = new Date();
-            date.setDate(date.getDate() + 30);
-            document.getElementById('expiry').valueAsDate = date;
-            calculate();
-        };
-
         const outputs = {
             stockCost: document.getElementById('res-stock-cost'),
             rawReturn: document.getElementById('res-raw-return'),
@@ -103,12 +92,18 @@
         };
 
         function calculate() {
-            const strike = parseFloat(document.getElementById('strike').value) || 0;
-            const premium = parseFloat(document.getElementById('premium').value) || 0;
+            const strike = parseFloat(document.getElementById('strike').value);
+            const premium = parseFloat(document.getElementById('premium').value);
             const taxRate = parseFloat(document.getElementById('taxRate').value) || 0;
             const expiryValue = document.getElementById('expiry').value;
 
-            let dte = 1;
+            // Don't calculate if basic inputs are missing
+            if (isNaN(strike) || isNaN(premium)) {
+                resetUI();
+                return;
+            }
+
+            let dte = 0;
             if (expiryValue) {
                 const expiryDate = new Date(expiryValue);
                 const today = new Date();
@@ -116,19 +111,38 @@
                 expiryDate.setHours(0, 0, 0, 0);
                 const diffTime = expiryDate - today;
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                dte = diffDays > 0 ? diffDays : 1;
+                dte = diffDays > 0 ? diffDays : 0;
             }
             outputs.dteDisplay.innerText = dte;
 
+            // Logic from Spreadsheet
             const stockCost = (strike * 100) - (premium * 100);
-            const rawReturn = (strike - premium) !== 0 ? (premium / (strike - premium)) * 100 : 0;
-            const annReturn = rawReturn * (365 / dte);
-            const taxReturn = annReturn * (1 - (taxRate / 100));
+            const capitalRequired = strike - premium;
+            
+            let rawReturn = 0;
+            let annReturn = 0;
+            let taxReturn = 0;
 
+            if (capitalRequired > 0) {
+                rawReturn = (premium / capitalRequired) * 100;
+                // Avoid division by zero for DTE
+                annReturn = dte > 0 ? rawReturn * (365 / dte) : 0;
+                taxReturn = annReturn * (1 - (taxRate / 100));
+            }
+
+            // Update UI
             outputs.stockCost.innerText = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(stockCost);
             outputs.rawReturn.innerText = rawReturn.toFixed(2) + '%';
-            outputs.annReturn.innerText = annReturn.toFixed(2) + '%';
-            outputs.taxReturn.innerText = taxReturn.toFixed(2) + '%';
+            outputs.annReturn.innerText = (annReturn > 10000 ? "High" : annReturn.toFixed(2) + '%');
+            outputs.taxReturn.innerText = (taxReturn > 10000 ? "High" : taxReturn.toFixed(2) + '%');
+        }
+
+        function resetUI() {
+            outputs.stockCost.innerText = "$0.00";
+            outputs.rawReturn.innerText = "0.00%";
+            outputs.annReturn.innerText = "0.00%";
+            outputs.taxReturn.innerText = "0.00%";
+            outputs.dteDisplay.innerText = "0";
         }
 
         document.querySelectorAll('input').forEach(input => {
