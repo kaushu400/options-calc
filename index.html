@@ -3,29 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KK Options Mobile Calc</title>
+    <title>KK Options Tracker</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .input-yellow {
-            background-color: #fef9c3;
-            border: 1px solid #fde047;
-        }
-        .input-yellow:focus {
-            background-color: #fef08a;
-            outline: 2px solid #eab308;
-        }
+        .input-yellow { background-color: #fef9c3; border: 1px solid #fde047; }
+        .input-yellow:focus { background-color: #fef08a; outline: 2px solid #eab308; }
         body { min-height: -webkit-fill-available; }
-        input::-webkit-outer-spin-button,
-        input::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .table-container { -webkit-overflow-scrolling: touch; }
     </style>
 </head>
-<body class="bg-slate-100 font-sans text-slate-900">
+<body class="bg-slate-100 font-sans text-slate-900 pb-20">
 
     <div class="max-w-md mx-auto">
         
+        <!-- Sticky Header / Results -->
         <div class="sticky top-0 z-10 bg-slate-100 pt-4 px-4 pb-2 shadow-sm border-b border-slate-200">
             <div class="bg-blue-600 rounded-xl p-4 text-white shadow-md mb-3 text-center">
                 <p class="text-blue-100 text-[10px] font-bold uppercase tracking-wider">Stock Cost If Assigned</p>
@@ -48,13 +40,9 @@
             </div>
         </div>
 
+        <!-- Input Section -->
         <div class="p-4 space-y-4">
             <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                <h2 class="text-sm font-bold text-slate-700 mb-4 uppercase tracking-tight flex justify-between items-center">
-                    <span>📊 Options Parameters</span>
-                    <button onclick="window.location.reload()" class="text-[10px] text-blue-500 font-normal">Clear All</button>
-                </h2>
-                
                 <div class="space-y-4">
                     <div>
                         <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase">Stock Ticker</label>
@@ -64,11 +52,11 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase">Strike ($)</label>
-                            <input type="number" id="strike" placeholder="0.00" step="any" inputmode="decimal" class="w-full p-3 rounded-lg input-yellow font-bold text-lg">
+                            <input type="number" id="strike" placeholder="0.00" inputmode="decimal" class="w-full p-3 rounded-lg input-yellow font-bold text-lg">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase">Premium ($)</label>
-                            <input type="number" id="premium" placeholder="0.00" step="any" inputmode="decimal" class="w-full p-3 rounded-lg input-yellow font-bold text-lg">
+                            <input type="number" id="premium" placeholder="0.00" inputmode="decimal" class="w-full p-3 rounded-lg input-yellow font-bold text-lg">
                         </div>
                     </div>
 
@@ -80,9 +68,36 @@
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase">Tax Rate %</label>
-                            <input type="number" id="taxRate" value="24" inputmode="numeric" class="w-full p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none font-bold text-lg">
+                            <input type="number" id="taxRate" value="24" inputmode="numeric" class="w-full p-3 border border-slate-200 rounded-lg font-bold text-lg">
                         </div>
                     </div>
+
+                    <!-- Action Buttons -->
+                    <div class="grid grid-cols-2 gap-3 pt-2">
+                        <button onclick="addToList()" class="bg-blue-600 text-white font-bold py-3 rounded-lg shadow-md active:bg-blue-700 uppercase text-sm">Add to List</button>
+                        <button onclick="clearList()" class="bg-slate-200 text-slate-700 font-bold py-3 rounded-lg active:bg-slate-300 uppercase text-sm">Reset List</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- List/Table Section -->
+            <div id="list-container" class="hidden">
+                <h3 class="text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Saved Calculations</h3>
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden overflow-x-auto table-container">
+                    <table class="w-full text-left text-[11px]">
+                        <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase">
+                            <tr>
+                                <th class="px-3 py-2">Stock</th>
+                                <th class="px-3 py-2">Cost</th>
+                                <th class="px-3 py-2 text-right">Ann %</th>
+                                <th class="px-3 py-2 text-right">Net %</th>
+                                <th class="px-2 py-2"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-body" class="divide-y divide-slate-100">
+                            <!-- Rows go here -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -94,10 +109,15 @@
             rawReturn: document.getElementById('res-raw-return'),
             annReturn: document.getElementById('res-ann-return'),
             taxReturn: document.getElementById('res-tax-return'),
-            dteDisplay: document.getElementById('display-dte')
+            dteDisplay: document.getElementById('display-dte'),
+            historyBody: document.getElementById('history-body'),
+            listContainer: document.getElementById('list-container')
         };
 
+        let currentData = {};
+
         function calculate() {
+            const stock = document.getElementById('stock').value || "---";
             const strike = parseFloat(document.getElementById('strike').value);
             const premium = parseFloat(document.getElementById('premium').value);
             const taxRate = parseFloat(document.getElementById('taxRate').value) || 0;
@@ -110,45 +130,55 @@
 
             let dte = 0;
             if (expiryValue) {
-                // Parse date components to avoid timezone offsets
                 const [year, month, day] = expiryValue.split('-').map(Number);
                 const expiryDate = new Date(year, month - 1, day);
-                
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 expiryDate.setHours(0, 0, 0, 0);
-                
-                const diffTime = expiryDate - today;
-                // Use Math.round to get the exact integer difference in days
-                const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-                
-                // If today is 3/12 and Expiry is 3/20, dte is now exactly 8.
-                dte = diffDays > 0 ? diffDays : 0;
+                dte = Math.round((expiryDate - today) / (1000 * 60 * 60 * 24));
+                dte = dte > 0 ? dte : 0;
             }
             outputs.dteDisplay.innerText = dte;
 
             const stockCost = (strike * 100) - (premium * 100);
-            const capitalRequired = strike - premium;
-            
-            let rawReturn = 0;
-            let annReturn = 0;
-            let taxReturn = 0;
+            const cap = strike - premium;
+            const rawReturn = cap > 0 ? (premium / cap) * 100 : 0;
+            const annReturn = dte > 0 ? rawReturn * (365 / dte) : rawReturn * 365;
+            const taxReturn = annReturn * (1 - (taxRate / 100));
 
-            if (capitalRequired > 0) {
-                rawReturn = (premium / capitalRequired) * 100;
-                
-                // Standard Annualization: If DTE is 0 (expires today), 
-                // we treat it as 1 to avoid infinity, or 0 to show 0.
-                // Trading convention usually uses 1 for same-day to calculate yield.
-                const effectiveDte = dte > 0 ? dte : 1; 
-                annReturn = rawReturn * (365 / effectiveDte);
-                taxReturn = annReturn * (1 - (taxRate / 100));
-            }
+            currentData = {
+                stock: stock.toUpperCase(),
+                cost: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(stockCost),
+                ann: annReturn.toFixed(2) + '%',
+                net: taxReturn.toFixed(2) + '%'
+            };
 
-            outputs.stockCost.innerText = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(stockCost);
+            outputs.stockCost.innerText = currentData.cost;
             outputs.rawReturn.innerText = rawReturn.toFixed(2) + '%';
-            outputs.annReturn.innerText = annReturn.toFixed(2) + '%';
-            outputs.taxReturn.innerText = taxReturn.toFixed(2) + '%';
+            outputs.annReturn.innerText = currentData.ann;
+            outputs.taxReturn.innerText = currentData.net;
+        }
+
+        function addToList() {
+            if (!currentData.stock || currentData.stock === "---") return;
+            
+            outputs.listContainer.classList.remove('hidden');
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="px-3 py-3 font-bold text-slate-800">${currentData.stock}</td>
+                <td class="px-3 py-3 text-slate-600">${currentData.cost}</td>
+                <td class="px-3 py-3 text-right font-medium">${currentData.ann}</td>
+                <td class="px-3 py-3 text-right font-bold text-emerald-600">${currentData.net}</td>
+                <td class="px-2 py-3 text-right">
+                    <button onclick="this.closest('tr').remove()" class="text-red-400 p-1">✕</button>
+                </td>
+            `;
+            outputs.historyBody.prepend(row);
+        }
+
+        function clearList() {
+            outputs.historyBody.innerHTML = '';
+            outputs.listContainer.classList.add('hidden');
         }
 
         function resetUI() {
@@ -157,6 +187,7 @@
             outputs.annReturn.innerText = "0.00%";
             outputs.taxReturn.innerText = "0.00%";
             outputs.dteDisplay.innerText = "0";
+            currentData = {};
         }
 
         document.querySelectorAll('input').forEach(input => {
