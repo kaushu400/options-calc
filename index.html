@@ -74,8 +74,8 @@
 
                     <!-- Action Buttons -->
                     <div class="grid grid-cols-2 gap-3 pt-2">
-                        <button onclick="addToList()" class="bg-blue-600 text-white font-bold py-3 rounded-lg shadow-md active:bg-blue-700 uppercase text-sm">Add to List</button>
-                        <button onclick="clearList()" class="bg-slate-200 text-slate-700 font-bold py-3 rounded-lg active:bg-slate-300 uppercase text-sm">Reset List</button>
+                        <button onclick="addToList()" class="bg-blue-600 text-white font-bold py-3 rounded-lg shadow-md active:bg-blue-700 uppercase text-xs">Add to List</button>
+                        <button onclick="clearList()" class="bg-slate-200 text-slate-700 font-bold py-3 rounded-lg active:bg-slate-300 uppercase text-xs">Reset List</button>
                     </div>
                 </div>
             </div>
@@ -84,13 +84,14 @@
             <div id="list-container" class="hidden">
                 <h3 class="text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Saved Calculations</h3>
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden overflow-x-auto table-container">
-                    <table class="w-full text-left text-[11px]">
+                    <table class="w-full text-left text-[10px]">
                         <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase">
                             <tr>
-                                <th class="px-3 py-2">Stock</th>
-                                <th class="px-3 py-2">Cost</th>
-                                <th class="px-3 py-2 text-right">Ann %</th>
-                                <th class="px-3 py-2 text-right">Net %</th>
+                                <th class="px-2 py-2">Stock</th>
+                                <th class="px-2 py-2">Cost</th>
+                                <th class="px-2 py-2 text-right">Ret %</th>
+                                <th class="px-2 py-2 text-right">Ann %</th>
+                                <th class="px-2 py-2 text-right">Net %</th>
                                 <th class="px-2 py-2"></th>
                             </tr>
                         </thead>
@@ -148,13 +149,14 @@
 
             currentData = {
                 stock: stock.toUpperCase(),
-                cost: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(stockCost),
+                cost: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(stockCost),
+                raw: rawReturn.toFixed(2) + '%',
                 ann: annReturn.toFixed(2) + '%',
                 net: taxReturn.toFixed(2) + '%'
             };
 
-            outputs.stockCost.innerText = currentData.cost;
-            outputs.rawReturn.innerText = rawReturn.toFixed(2) + '%';
+            outputs.stockCost.innerText = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(stockCost);
+            outputs.rawReturn.innerText = currentData.raw;
             outputs.annReturn.innerText = currentData.ann;
             outputs.taxReturn.innerText = currentData.net;
         }
@@ -165,12 +167,13 @@
             outputs.listContainer.classList.remove('hidden');
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td class="px-3 py-3 font-bold text-slate-800">${currentData.stock}</td>
-                <td class="px-3 py-3 text-slate-600">${currentData.cost}</td>
-                <td class="px-3 py-3 text-right font-medium">${currentData.ann}</td>
-                <td class="px-3 py-3 text-right font-bold text-emerald-600">${currentData.net}</td>
-                <td class="px-2 py-3 text-right">
-                    <button onclick="this.closest('tr').remove()" class="text-red-400 p-1">✕</button>
+                <td class="px-2 py-3 font-bold text-slate-800">${currentData.stock}</td>
+                <td class="px-2 py-3 text-slate-600">${currentData.cost}</td>
+                <td class="px-2 py-3 text-right text-slate-600">${currentData.raw}</td>
+                <td class="px-2 py-3 text-right font-medium text-slate-800">${currentData.ann}</td>
+                <td class="px-2 py-3 text-right font-bold text-emerald-600">${currentData.net}</td>
+                <td class="px-1 py-3 text-right">
+                    <button onclick="this.closest('tr').remove()" class="text-red-300 active:text-red-600 p-1">✕</button>
                 </td>
             `;
             outputs.historyBody.prepend(row);
