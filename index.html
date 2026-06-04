@@ -161,7 +161,7 @@
 
             currentData = {
                 stock: stock.toUpperCase(),
-                strike: strike % 1 === 0 ? strike : strike.toFixed(2), // clean formatting for integers
+                strike: strike % 1 === 0 ? strike : strike.toFixed(2),
                 expiry: formattedDate,
                 cost: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(stockCost),
                 raw: rawReturn.toFixed(2) + '%',
@@ -188,7 +188,7 @@
                 <td class="px-1 py-3 text-right font-medium text-slate-800">${currentData.ann}</td>
                 <td class="px-1 py-3 text-right font-bold text-emerald-600">${currentData.net}</td>
                 <td class="px-1 py-3 text-right">
-                    <button onclick="this.closest('tr').remove()' class="text-red-300 active:text-red-600 p-1">✕</button>
+                    <button onclick="this.closest('tr').remove()" class="text-red-300 active:text-red-600 p-1">✕</button>
                 </td>
             `;
             outputs.historyBody.prepend(row);
